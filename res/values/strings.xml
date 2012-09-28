@@ -6,4 +6,5 @@
     <string name="pick_hsv_color">Pick HSV color.</string>
     <string name="pick_grid_color">Pick preset color.</string>
     <string name="pick_file">Pick a file.</string>
+    <string name="pick_number">Pick a number.</string>
 </resources>

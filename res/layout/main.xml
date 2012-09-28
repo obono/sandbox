@@ -35,6 +35,12 @@
     android:text="@string/pick_file"
     android:onClick="onPickFile"
     />
+<Button
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/pick_number"
+    android:onClick="onPickNumber"
+    />
 
 <!-- com.obnsoft.view.FreeScrollView
     android:layout_width="match_parent"

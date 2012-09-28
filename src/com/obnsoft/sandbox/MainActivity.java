@@ -16,6 +16,7 @@
 
 package com.obnsoft.sandbox;
 
+import com.obnsoft.app.DigitsDialogBuilder;
 import com.obnsoft.view.ColorPickerInterface;
 import com.obnsoft.view.GridColorPickerView;
 import com.obnsoft.view.HSVColorPickerView;
@@ -74,6 +75,18 @@ public class MainActivity extends Activity {
         startActivityForResult(intent, PICK_FILE_REQUEST);
     }
 
+    public void onPickNumber(View v) {
+        final DigitsDialogBuilder builder = new DigitsDialogBuilder(this);
+        builder.setDigits(6, 2);
+        builder.setValue(getTitle().toString());
+        builder.setPositiveButton(android.R.string.ok, new OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                setTitle(builder.getStringValue());
+            }
+        }).show();
+    }
+
     private void pickColor(final View cpv) {
         final ColorPickerInterface cpi;
         try {
@@ -117,7 +130,7 @@ public class MainActivity extends Activity {
 
         new AlertDialog.Builder(this)
         .setView(ll)
-        .setPositiveButton("OK", new OnClickListener() {
+        .setPositiveButton(android.R.string.ok, new OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int witch) {
                 setTitleColor(cpi.getColor());
