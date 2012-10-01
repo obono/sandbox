@@ -79,12 +79,14 @@ public class MainActivity extends Activity {
         final DigitsDialogBuilder builder = new DigitsDialogBuilder(this);
         builder.setDigits(6, 2);
         builder.setValue(getTitle().toString());
-        builder.setPositiveButton(android.R.string.ok, new OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                setTitle(builder.getStringValue());
-            }
-        }).show();
+        builder.setTitle(R.string.pick_number)
+                .setMessage(R.string.pick_number)
+                .setPositiveButton(android.R.string.ok, new OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        setTitle(builder.getStringValue());
+                    }
+                }).show();
     }
 
     private void pickColor(final View cpv) {
