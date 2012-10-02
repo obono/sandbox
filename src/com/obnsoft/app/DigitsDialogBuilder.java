@@ -22,13 +22,14 @@ import java.text.ParseException;
 import android.app.AlertDialog;
 import android.app.AlertDialog.Builder;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.DialogInterface.OnKeyListener;
+import android.content.DialogInterface.OnClickListener;
 import android.content.res.Configuration;
 import android.graphics.Color;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
-import android.view.View.OnKeyListener;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -44,21 +45,81 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
     private static final String[] LAYOUT_LAND = {"12345D", "67890."};
 
     private final DecimalFormat mFormat = new DecimalFormat("0.########");
-    private final char  mPointChar = mFormat.getDecimalFormatSymbols().getDecimalSeparator();
+    private final char      mPointChar = mFormat.getDecimalFormatSymbols().getDecimalSeparator();
+    private final String    mPointCharStr = String.valueOf(mPointChar);
 
-    private TextView    mTextViewMsg;
-    private TextView    mTextViewValue;
-    private Button      mButtonPoint;
-    private ImageButton mButtonDelete;
+    private AlertDialog     mDialog;
+    private TextView        mTextViewMsg;
+    private TextView        mTextViewValue;
+    private Button          mButtonPoint;
+    private ImageButton     mButtonDelete;
+    private StringBuffer    mStrBufValue = new StringBuffer();
+    private OnClickListener mOKButtonListener;
 
     private int mDigits = 8;
     private int mFractions = 0;
 
     /*----------------------------------------------------------------------*/
 
+    private OnKeyListener mKeyListener = new OnKeyListener() {
+        @Override
+        public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+            boolean ret = false;
+            if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                if (keyCode == KeyEvent.KEYCODE_DEL) {
+                    mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
+                    ret = true;
+                } else if (keyCode == KeyEvent.KEYCODE_PERIOD || keyCode == KeyEvent.KEYCODE_COMMA) {
+                    mStrBufValue.append(mPointChar);
+                    ret = true;
+                } else if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+                    mStrBufValue.append(keyCode - KeyEvent.KEYCODE_0);
+                    ret = true;
+                }
+                if (ret) {
+                    setTextViewValue();
+                }
+            }
+            return ret;
+        }
+    };
+
+    private View.OnClickListener mClickListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            if (view == mButtonDelete) {
+                mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
+            } else {
+                Button btn = (Button) view;
+                mStrBufValue.append(btn.getText());
+            }
+            setTextViewValue();
+        }
+    };
+
+    /*----------------------------------------------------------------------*/
+
     public DigitsDialogBuilder(Context context) {
         super(context);
         super.setView(createEntryView(context));
+        super.setOnKeyListener(mKeyListener);
+    }
+
+    @Override
+    public AlertDialog create() {
+        mDialog = super.create();
+        return mDialog;
+    }
+
+    @Override
+    public Builder setMessage(CharSequence message) {
+        if (message.length() > 0) {
+            mTextViewMsg.setText(message);
+            mTextViewMsg.setVisibility(View.VISIBLE);
+        } else {
+            mTextViewMsg.setVisibility(View.GONE);
+        }
+        return this;
     }
 
     @Override
@@ -73,18 +134,19 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
     }
 
     @Override
-    public AlertDialog.Builder setMessage(CharSequence message) {
-        if (message.length() > 0) {
-            mTextViewMsg.setText(message);
-            mTextViewMsg.setVisibility(View.VISIBLE);
-        } else {
-            mTextViewMsg.setVisibility(View.GONE);
-        }
-        return this;
+    public Builder setPositiveButton(CharSequence text, OnClickListener listener) {
+        mOKButtonListener = listener;
+        return super.setPositiveButton(text, listener);
     }
 
     @Override
-    public AlertDialog.Builder setView(View view) {
+    public Builder setPositiveButton(int textId, OnClickListener listener) {
+        mOKButtonListener = listener;
+        return super.setPositiveButton(textId, listener);
+    }
+
+    @Override
+    public Builder setView(View view) {
         return this;    // Do nothing
     }
 
@@ -105,7 +167,8 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
     }
 
     public void setValue(String value) {
-        mTextViewValue.setText(controlValue(value));
+        mStrBufValue = new StringBuffer(value);
+        setTextViewValue();
     }
 
     /*----------------------------------------------------------------------*/
@@ -129,46 +192,10 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
     }
 
     public String getStringValue() {
-        return mTextViewValue.getText().toString();
+        return mStrBufValue.toString();
     }
 
     /*----------------------------------------------------------------------*/
-
-    private OnClickListener mClickListener = new OnClickListener() {
-        @Override
-        public void onClick(View view) {
-            CharSequence chrs = mTextViewValue.getText();
-            if (view == mButtonDelete) {
-                chrs = chrs.subSequence(0, chrs.length() - 1);
-            } else {
-                Button btn = (Button) view;
-                chrs = new StringBuffer(chrs).append(btn.getText());
-            }
-            mTextViewValue.setText(controlValue(chrs));
-        }
-    };
-
-    private OnKeyListener mKeyListener = new OnKeyListener() {
-        @Override
-        public boolean onKey(View v, int keyCode, KeyEvent event) {
-            boolean ret = false;
-            CharSequence chrs = mTextViewValue.getText();
-            if (keyCode == KeyEvent.KEYCODE_DEL) {
-                chrs = chrs.subSequence(0, chrs.length() - 1);
-                ret = true;
-            } else if (keyCode == KeyEvent.KEYCODE_PERIOD || keyCode == KeyEvent.KEYCODE_COMMA) {
-                chrs = new StringBuffer(chrs).append(mPointChar);
-                ret = true;
-            } else if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-                chrs = new StringBuffer(chrs).append(keyCode - KeyEvent.KEYCODE_0);
-                ret = true;
-            }
-            if (ret) {
-                mTextViewValue.setText(controlValue(chrs));
-            }
-            return ret;
-        }
-    };
 
     private View createEntryView(Context context) {
         LinearLayout ret = new LinearLayout(context);
@@ -181,10 +208,23 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         mTextViewMsg.setVisibility(View.GONE);
         ret.addView(mTextViewMsg, lp);
 
-        mTextViewValue = new TextView(context);
-        mTextViewValue.setBackgroundResource(android.R.drawable.edit_text);
+        mTextViewValue = new TextView(context, null, android.R.attr.editTextStyle);
         mTextViewValue.setTextAppearance(context, android.R.style.TextAppearance_Large_Inverse);
         mTextViewValue.setGravity(Gravity.CENTER);
+        mTextViewValue.setOnKeyListener(new View.OnKeyListener() {
+            @Override
+            public boolean onKey(View v, int keyCode, KeyEvent event) {
+                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
+                    if (mDialog != null && mOKButtonListener != null) {
+                        mOKButtonListener.onClick(mDialog, AlertDialog.BUTTON_POSITIVE);
+                        mDialog.dismiss();
+                    }
+                    return true;
+                }
+                return false;
+            }
+        });
         ret.addView(mTextViewValue, lp);
 
         int orientation = context.getResources().getConfiguration().orientation;
@@ -207,14 +247,13 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
                     btn.setText(String.valueOf(c));
                     if (c == '.') {
                         mButtonPoint = btn;
-                        mButtonPoint.setText(String.valueOf(mPointChar));
+                        mButtonPoint.setText(mPointCharStr);
                         mButtonPoint.setVisibility(View.INVISIBLE);
                     }
                     view = btn;
                 }
                 view.setPadding(0, 0, 0, 0);
                 view.setOnClickListener(mClickListener);
-                view.setOnKeyListener(mKeyListener);
                 ll.addView(view, lp);
             }
             ret.addView(ll);
@@ -222,30 +261,29 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         return ret;
     }
 
-    private CharSequence controlValue(CharSequence chrs) {
-        int len = chrs.length();
-        int pointPos = chrs.toString().indexOf(mPointChar);
+    private void setTextViewValue() {
+        int len = mStrBufValue.length();
+        int pointPos = mStrBufValue.indexOf(mPointCharStr);
         if (pointPos == -1) {
-            while (len > 0 && chrs.charAt(0) == '0') {
-                chrs = chrs.subSequence(1, chrs.length());
+            while (len > 0 && mStrBufValue.charAt(0) == '0') {
+                mStrBufValue.deleteCharAt(0);
                 len--;
             }
             if (len == 0) {
-                chrs = "0";
+                mStrBufValue.append('0');
             } else if (len > mDigits) {
-                chrs = chrs.subSequence(0, mDigits);
+                mStrBufValue.setLength(mDigits);
             }
         } else {
             int maxLen = pointPos + mFractions + 1;
-            if (pointPos < len - 1 && chrs.charAt(len - 1) == mPointChar) len--;
+            if (pointPos < len - 1 && mStrBufValue.charAt(len - 1) == mPointChar) len--;
             if (mFractions == 0) maxLen--;
             if (len > maxLen) len = maxLen;
-            chrs = chrs.subSequence(0, len);
+            mStrBufValue.setLength(len);
             if (pointPos > mDigits) {
-                chrs = new StringBuffer(chrs.subSequence(0, mDigits))
-                        .append(chrs.subSequence(pointPos, len));
+                mStrBufValue.delete(mDigits, pointPos);
             }
         }
-        return chrs;
+        mTextViewValue.setText(mStrBufValue.toString());
     }
 }
