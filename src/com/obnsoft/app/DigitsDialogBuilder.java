@@ -55,54 +55,43 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
     private ImageButton     mButtonDelete;
     private StringBuffer    mStrBufValue = new StringBuffer();
     private OnClickListener mOKButtonListener;
+    private OnKeyListener   mKeyListener;
 
     private int mDigits = 8;
     private int mFractions = 0;
 
     /*----------------------------------------------------------------------*/
 
-    private OnKeyListener mKeyListener = new OnKeyListener() {
-        @Override
-        public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
-            boolean ret = false;
-            if (event.getAction() == KeyEvent.ACTION_DOWN) {
-                if (keyCode == KeyEvent.KEYCODE_DEL) {
-                    mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
-                    ret = true;
-                } else if (keyCode == KeyEvent.KEYCODE_PERIOD || keyCode == KeyEvent.KEYCODE_COMMA) {
-                    mStrBufValue.append(mPointChar);
-                    ret = true;
-                } else if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
-                    mStrBufValue.append(keyCode - KeyEvent.KEYCODE_0);
-                    ret = true;
-                }
-                if (ret) {
-                    setTextViewValue();
-                }
-            }
-            return ret;
-        }
-    };
-
-    private View.OnClickListener mClickListener = new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-            if (view == mButtonDelete) {
-                mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
-            } else {
-                Button btn = (Button) view;
-                mStrBufValue.append(btn.getText());
-            }
-            setTextViewValue();
-        }
-    };
-
-    /*----------------------------------------------------------------------*/
-
     public DigitsDialogBuilder(Context context) {
         super(context);
         super.setView(createEntryView(context));
-        super.setOnKeyListener(mKeyListener);
+        super.setOnKeyListener(new OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialog, int keyCode, KeyEvent event) {
+                if (mKeyListener != null && mKeyListener.onKey(dialog, keyCode, event)) {
+                    return true;
+                }
+                boolean ret = false;
+                if (event.getAction() == KeyEvent.ACTION_DOWN) {
+                    if (keyCode == KeyEvent.KEYCODE_DEL) {
+                        mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
+                        ret = true;
+                    } else if (keyCode == KeyEvent.KEYCODE_PERIOD ||
+                            keyCode == KeyEvent.KEYCODE_COMMA ||
+                            keyCode == KeyEvent.KEYCODE_STAR) {
+                        mStrBufValue.append(mPointChar);
+                        ret = true;
+                    } else if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+                        mStrBufValue.append(keyCode - KeyEvent.KEYCODE_0);
+                        ret = true;
+                    }
+                    if (ret) {
+                        setTextViewValue();
+                    }
+                }
+                return ret;
+            }
+        });
     }
 
     @Override
@@ -130,6 +119,12 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         } else {
             mTextViewMsg.setVisibility(View.GONE);
         }
+        return this;
+    }
+
+    @Override
+    public Builder setOnKeyListener(OnKeyListener onKeyListener) {
+        mKeyListener = onKeyListener;
         return this;
     }
 
@@ -214,10 +209,14 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         mTextViewValue.setOnKeyListener(new View.OnKeyListener() {
             @Override
             public boolean onKey(View v, int keyCode, KeyEvent event) {
-                if (event.getAction() != KeyEvent.ACTION_DOWN) return false;
+                if (event.getAction() != KeyEvent.ACTION_DOWN) {
+                    return false;
+                }
                 if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER) {
-                    if (mDialog != null && mOKButtonListener != null) {
+                    if (mOKButtonListener != null) {
                         mOKButtonListener.onClick(mDialog, AlertDialog.BUTTON_POSITIVE);
+                    }
+                    if (mDialog != null) {
                         mDialog.dismiss();
                     }
                     return true;
@@ -230,6 +229,18 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         int orientation = context.getResources().getConfiguration().orientation;
         String[] layout =
             (orientation == Configuration.ORIENTATION_LANDSCAPE) ? LAYOUT_LAND : LAYOUT_PORT;
+        View.OnClickListener clickListener = new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (view == mButtonDelete) {
+                    mStrBufValue.deleteCharAt(mStrBufValue.length() - 1);
+                } else {
+                    Button btn = (Button) view;
+                    mStrBufValue.append(btn.getText());
+                }
+                setTextViewValue();
+            }
+        };
 
         for (String line : layout) {
             LinearLayout ll = new LinearLayout(context);
@@ -253,7 +264,7 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
                     view = btn;
                 }
                 view.setPadding(0, 0, 0, 0);
-                view.setOnClickListener(mClickListener);
+                view.setOnClickListener(clickListener);
                 ll.addView(view, lp);
             }
             ret.addView(ll);
