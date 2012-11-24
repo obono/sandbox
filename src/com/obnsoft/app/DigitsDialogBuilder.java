@@ -177,6 +177,21 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
         }
     }
 
+    public int getFracValue() {
+        int len = mStrBufValue.length();
+        int pointPos = mStrBufValue.indexOf(mPointCharStr);
+        if (mFractions == 0 || pointPos == -1 || pointPos == len - 1) {
+            return 0;
+        }
+        try {
+            int frac = mFormat.parse(mStrBufValue.substring(pointPos + 1)).intValue();
+            return frac * (int) Math.pow(10, mFractions - (len - pointPos - 1));
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
     public double getDoubleValue() {
         try {
             return mFormat.parse(getStringValue()).doubleValue();
