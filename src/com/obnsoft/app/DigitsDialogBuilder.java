@@ -27,9 +27,11 @@ import android.content.DialogInterface.OnKeyListener;
 import android.content.DialogInterface.OnClickListener;
 import android.content.res.Configuration;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.View.OnLongClickListener;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -265,7 +267,14 @@ public class DigitsDialogBuilder extends AlertDialog.Builder {
                 if (c == 'D') {
                     mButtonDelete = new ImageButton(context, null, android.R.attr.buttonStyleSmall);
                     mButtonDelete.setImageResource(android.R.drawable.ic_input_delete);
-                    mButtonDelete.setColorFilter(Color.argb(192, 0, 0, 0));
+                    mButtonDelete.setColorFilter(Color.argb(192, 0,0,0), PorterDuff.Mode.SRC_ATOP);
+                    mButtonDelete.setOnLongClickListener(new OnLongClickListener() {
+                        @Override
+                        public boolean onLongClick(View view) {
+                            setValue(0);
+                            return true;
+                        }
+                    });
                     view = mButtonDelete;
                 } else {
                     Button btn = new Button(context, null, android.R.attr.buttonStyleSmall);
