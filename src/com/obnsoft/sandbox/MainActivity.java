@@ -89,6 +89,11 @@ public class MainActivity extends Activity {
                 }).show();
     }
 
+    public void onMagnifyView(View v) {
+        Intent intent = new Intent(this, MyMagnifyActivity.class);
+        startActivity(intent);
+    }
+
     private void pickColor(final View cpv) {
         final ColorPickerInterface cpi;
         try {

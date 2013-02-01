@@ -41,6 +41,12 @@
     android:text="@string/pick_number"
     android:onClick="onPickNumber"
     />
+<Button
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="@string/magnify_image"
+    android:onClick="onMagnifyView"
+    />
 
 <!-- com.obnsoft.view.FreeScrollView
     android:layout_width="match_parent"
