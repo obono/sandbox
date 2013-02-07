@@ -24,18 +24,34 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
+import android.view.ScaleGestureDetector.OnScaleGestureListener;
 import android.view.View;
 
-public class MagnifyView extends View {
+public class MagnifyView extends View implements OnScaleGestureListener {
 
-    private int     mUnit = 2;
+    private static final int MINIMUM_UNIT = 4;
+    private static final int MAXIMUM_UNIT = 64;
+
+    private int     mUnit = MINIMUM_UNIT;
     private boolean mDotted;
+
+    private boolean mIsMoving;
+    private boolean mIsScaling;
+    private int     mScalingUnit;
+    private float   mScalingSpan;
+    private int     mFocusX;
+    private int     mFocusY;
+    private int     mFocusUnitX;
+    private int     mFocusUnitY;
+
     private Bitmap  mBitmap;
     private Rect    mBitmapRect = new Rect();
     private Rect    mDrawRect = new Rect();
     private Paint   mGridPaint = new Paint();
 
     private EventHandler mHandler;
+    private ScaleGestureDetector mGestureDetector;
 
     /*-----------------------------------------------------------------------*/
 
@@ -55,6 +71,7 @@ public class MagnifyView extends View {
 
     public MagnifyView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        mGestureDetector = new ScaleGestureDetector(context, this);
         mGridPaint.setAntiAlias(false);
         mGridPaint.setStrokeWidth(1);
     }
@@ -68,6 +85,9 @@ public class MagnifyView extends View {
         canvas.drawBitmap(mBitmap, mBitmapRect, mDrawRect, null);
         if (mGridPaint.getColor() != Color.TRANSPARENT) {
             Rect clip = canvas.getClipBounds();
+            if (clip.isEmpty()) {
+                clip.set(0, 0, getWidth(), getHeight());
+            }
             int cl = Math.max(clip.left, mDrawRect.left);
             int cr = Math.min(clip.right, mDrawRect.right + 1);
             int ct = Math.max(clip.top, mDrawRect.top);
@@ -103,12 +123,91 @@ public class MagnifyView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (mHandler == null) {
-            return false;
+        int x = (int) event.getX();
+        int y = (int) event.getY();
+        if (mHandler != null) {
+            int unitX = (x - mDrawRect.left) / mUnit;
+            int unitY = (y - mDrawRect.top) / mUnit;
+            return mHandler.onTouchEventUnit(event, unitX, unitY);
         }
-        int x = ((int) event.getX() - mDrawRect.left) / mUnit;
-        int y = ((int) event.getY() - mDrawRect.top) / mUnit;
-        return mHandler.onTouchEventUnit(event, x, y);
+        mGestureDetector.onTouchEvent(event);
+        boolean ret = mIsScaling;
+        if (!mIsScaling) {
+            switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                mIsMoving = true;
+                mFocusX = x;
+                mFocusY = y;
+                ret = true;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                if (mIsMoving) {
+                    mDrawRect.offset(x - mFocusX, y - mFocusY);
+                    mFocusX = x;
+                    mFocusY = y;
+                    invalidate();
+                    ret = true;
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_UP:
+                if (mIsMoving) {
+                    mIsMoving = false;
+                    ret = true;
+                }
+                break;
+            }
+        }
+        return ret;
+    }
+
+    /*-----------------------------------------------------------------------*/
+
+    @Override
+    public boolean onScale(ScaleGestureDetector detector) {
+        float span = detector.getCurrentSpan();
+        if (span > 0) {
+            int unit = (int) (mScalingUnit * span / mScalingSpan + .5);
+            if (unit < MINIMUM_UNIT) {
+                unit = MINIMUM_UNIT;
+            }
+            if (unit > MAXIMUM_UNIT) {
+                unit = MAXIMUM_UNIT;
+            }
+            if (unit != mUnit) {
+                mUnit = unit;
+                int dx = (int) (mFocusX - (mFocusUnitX + .5f) * unit);
+                int dy = (int) (mFocusY - (mFocusUnitY + .5f) * unit);
+                mDrawRect.set(dx, dy,
+                        dx + mBitmapRect.right * mUnit, dy + mBitmapRect.bottom * mUnit);
+                invalidate();
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onScaleBegin(ScaleGestureDetector detector) {
+        mIsMoving = false;
+        if (mBitmap != null) {
+            mFocusX = (int) detector.getFocusX();
+            mFocusY = (int) detector.getFocusY();
+            mFocusUnitX = ((int) mFocusX - mDrawRect.left) / mUnit;
+            mFocusUnitY = ((int) mFocusY - mDrawRect.top) / mUnit;
+            if (mFocusUnitX >= 0 && mFocusUnitX < mBitmapRect.right &&
+                    mFocusUnitY >= 0 && mFocusUnitY < mBitmapRect.bottom) {
+                mIsScaling = true;
+                mScalingUnit = mUnit;
+                mScalingSpan = detector.getCurrentSpan();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void onScaleEnd(ScaleGestureDetector detector) {
+        mIsScaling = false;
     }
 
     /*-----------------------------------------------------------------------*/
@@ -165,11 +264,12 @@ public class MagnifyView extends View {
             return;
         }
         mUnit = Math.min((dw - 1) / sw, (dh - 1) / sh);
-        if (mUnit < 2) {
-            mUnit = 2;
+        if (mUnit < MINIMUM_UNIT) {
+            mUnit = MINIMUM_UNIT;
         }
         int dx = (dw - sw * mUnit) / 2;
         int dy = (dh - sh * mUnit) / 2;
         mDrawRect.set(dx, dy, dx + sw * mUnit, dy + sh * mUnit);
     }
+
 }

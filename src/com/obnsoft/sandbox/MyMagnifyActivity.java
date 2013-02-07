@@ -42,12 +42,13 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
         super.onCreate(savedInstanceState);
 
         mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
+        //mBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
         mCanvas = new Canvas(mBitmap);
 
         mMgView = new MagnifyView(this);
         mMgView.setBitmap(mBitmap);
-        mMgView.setGridColor(Color.WHITE, true);
-        mMgView.setEventHandler(this);
+        mMgView.setGridColor(Color.GRAY, false);
+        //mMgView.setEventHandler(this);
         setContentView(mMgView);
     }
 
