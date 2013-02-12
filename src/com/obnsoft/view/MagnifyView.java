@@ -145,6 +145,7 @@ public class MagnifyView extends View implements OnScaleGestureListener {
                     mDrawRect.offset(x - mFocusX, y - mFocusY);
                     mFocusX = x;
                     mFocusY = y;
+                    adjustDrawRect();
                     invalidate();
                     ret = true;
                 }
@@ -180,6 +181,7 @@ public class MagnifyView extends View implements OnScaleGestureListener {
                 int dy = (int) (mFocusY - (mFocusUnitY + .5f) * unit);
                 mDrawRect.set(dx, dy,
                         dx + mBitmapRect.right * mUnit, dy + mBitmapRect.bottom * mUnit);
+                adjustDrawRect();
                 invalidate();
             }
         }
@@ -270,6 +272,28 @@ public class MagnifyView extends View implements OnScaleGestureListener {
         int dx = (dw - sw * mUnit) / 2;
         int dy = (dh - sh * mUnit) / 2;
         mDrawRect.set(dx, dy, dx + sw * mUnit, dy + sh * mUnit);
+    }
+
+    private void adjustDrawRect() {
+        int dw = getWidth();
+        int dh = getHeight();
+        int margin = Math.min(dw, dh) / 4;
+
+        if (dw - mDrawRect.width() > margin * 2) {
+            mDrawRect.offset((dw - mDrawRect.width()) / 2 - mDrawRect.left, 0);
+        } else if (mDrawRect.left > margin){
+            mDrawRect.offset(margin - mDrawRect.left, 0);
+        } else if (dw - mDrawRect.right > margin){
+            mDrawRect.offset(dw - mDrawRect.right - margin, 0);
+        }
+
+        if (dh - mDrawRect.height() > margin * 2) {
+            mDrawRect.offset(0, (dh - mDrawRect.height()) / 2 - mDrawRect.top);
+        } else if (mDrawRect.top > margin){
+            mDrawRect.offset(0, margin - mDrawRect.top);
+        } else if (dh - mDrawRect.bottom > margin){
+            mDrawRect.offset(0, dh - mDrawRect.bottom - margin);
+        }
     }
 
 }
