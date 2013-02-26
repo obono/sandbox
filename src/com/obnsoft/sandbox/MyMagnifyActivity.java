@@ -47,6 +47,7 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
 
         mMgView = new MagnifyView(this);
         mMgView.setBitmap(mBitmap);
+        mMgView.setScrollable(true);
         mMgView.setGridColor(Color.GRAY, false);
         //mMgView.setEventHandler(this);
         setContentView(mMgView);

@@ -30,11 +30,13 @@ import android.view.View;
 
 public class MagnifyView extends View implements OnScaleGestureListener {
 
-    private static final int MINIMUM_UNIT = 4;
-    private static final int MAXIMUM_UNIT = 64;
-
-    private int     mUnit = MINIMUM_UNIT;
+    private int     mUnit = 1;
+    private int     mMinUnit = 1;
+    private int     mMaxUnit = 64;
+    private int     mGridColor = Color.TRANSPARENT;
+    private int     mFrameColor = Color.WHITE;
     private boolean mDotted;
+    private boolean mScrollable;
 
     private boolean mIsMoving;
     private boolean mIsScaling;
@@ -46,9 +48,10 @@ public class MagnifyView extends View implements OnScaleGestureListener {
     private int     mFocusUnitY;
 
     private Bitmap  mBitmap;
-    private Rect    mBitmapRect = new Rect();
+    private Rect    mWorkRect = new Rect();
+    private Rect    mSrcRect = new Rect();
     private Rect    mDrawRect = new Rect();
-    private Paint   mGridPaint = new Paint();
+    private Paint   mPaint = new Paint();
 
     private EventHandler mHandler;
     private ScaleGestureDetector mGestureDetector;
@@ -71,9 +74,10 @@ public class MagnifyView extends View implements OnScaleGestureListener {
 
     public MagnifyView(Context context, AttributeSet attrs, int defStyle) {
         super(context, attrs, defStyle);
+        mPaint.setAntiAlias(false);
+        mPaint.setStyle(Paint.Style.STROKE);
+        mPaint.setStrokeWidth(1);
         mGestureDetector = new ScaleGestureDetector(context, this);
-        mGridPaint.setAntiAlias(false);
-        mGridPaint.setStrokeWidth(1);
     }
 
     @Override
@@ -82,36 +86,50 @@ public class MagnifyView extends View implements OnScaleGestureListener {
         if (mBitmap == null) {
             return;
         }
-        canvas.drawBitmap(mBitmap, mBitmapRect, mDrawRect, null);
-        if (mGridPaint.getColor() != Color.TRANSPARENT) {
-            Rect clip = canvas.getClipBounds();
-            if (clip.isEmpty()) {
-                clip.set(0, 0, getWidth(), getHeight());
+
+        canvas.getClipBounds(mWorkRect);
+        if (mWorkRect.isEmpty()) {
+            mWorkRect.set(0, 0, getWidth(), getHeight());
+        }
+        int cl = Math.max(mWorkRect.left, mDrawRect.left);
+        int cr = Math.min(mWorkRect.right, mDrawRect.right);
+        int ct = Math.max(mWorkRect.top, mDrawRect.top);
+        int cb = Math.min(mWorkRect.bottom, mDrawRect.bottom);
+        cl -= (cl - mDrawRect.left) % mUnit;
+        ct -= (ct - mDrawRect.top) % mUnit;
+
+        mPaint.setColor(mGridColor);
+        if (mGridColor != Color.TRANSPARENT) {
+            int x1 = cl, x2 = cl;
+            int y1 = ct, y2 = ct;
+            while (x1 < cr || y1 < cb) {
+                if (x1 < cr) x1 += mUnit; else y1 += mUnit;
+                if (y2 < cb) y2 += mUnit; else x2 += mUnit;
+                canvas.drawLine(x1, y1, x2, y2, mPaint);
             }
-            int cl = Math.max(clip.left, mDrawRect.left);
-            int cr = Math.min(clip.right, mDrawRect.right + 1);
-            int ct = Math.max(clip.top, mDrawRect.top);
-            int cb = Math.min(clip.bottom, mDrawRect.bottom + 1);
+        }
+        canvas.drawBitmap(mBitmap, mSrcRect, mDrawRect, null);
+        if (mPaint.getColor() != Color.TRANSPARENT) {
             if (mDotted) {
-                for (int x = mDrawRect.left; x <= cr; x += mUnit) {
-                    for (int y = mDrawRect.top; y <= cb; y += mUnit) {
-                        if (x >= cl && y >= ct) {
-                            canvas.drawPoint(x, y, mGridPaint);
-                        }
+                for (int x = cl; x <= cr; x += mUnit) {
+                    for (int y = ct; y <= cb; y += mUnit) {
+                        canvas.drawPoint(x, y, mPaint);
                     }
                 }
             } else {
-                for (int x = mDrawRect.left; x <= cr; x += mUnit) {
-                    if (x >= cl) {
-                        canvas.drawLine(x, ct, x, cb, mGridPaint);
-                    }
+                for (int x = cl; x <= cr; x += mUnit) {
+                    canvas.drawLine(x, ct, x, cb, mPaint);
                 }
-                for (int y = mDrawRect.top; y <= cb; y += mUnit) {
-                    if (y >= ct) {
-                        canvas.drawLine(cl, y, cr, y, mGridPaint);
-                    }
+                for (int y = ct; y <= cb; y += mUnit) {
+                    canvas.drawLine(cl, y, cr, y, mPaint);
                 }
             }
+        }
+        if (mFrameColor != Color.TRANSPARENT) {
+            mPaint.setColor(mFrameColor);
+            int gap = (mGridColor == Color.TRANSPARENT) ? 1 : 0;
+            canvas.drawRect(mDrawRect.left - gap, mDrawRect.top - gap,
+                    mDrawRect.right, mDrawRect.bottom, mPaint);
         }
     }
 
@@ -130,6 +148,8 @@ public class MagnifyView extends View implements OnScaleGestureListener {
             int unitY = (y - mDrawRect.top) / mUnit;
             return mHandler.onTouchEventUnit(event, unitX, unitY);
         }
+
+        if (!mScrollable) return false;
         mGestureDetector.onTouchEvent(event);
         boolean ret = mIsScaling;
         if (!mIsScaling) {
@@ -169,18 +189,18 @@ public class MagnifyView extends View implements OnScaleGestureListener {
         float span = detector.getCurrentSpan();
         if (span > 0) {
             int unit = (int) (mScalingUnit * span / mScalingSpan + .5);
-            if (unit < MINIMUM_UNIT) {
-                unit = MINIMUM_UNIT;
+            if (unit < mMinUnit) {
+                unit = mMinUnit;
             }
-            if (unit > MAXIMUM_UNIT) {
-                unit = MAXIMUM_UNIT;
+            if (unit > mMaxUnit) {
+                unit = mMaxUnit;
             }
             if (unit != mUnit) {
                 mUnit = unit;
                 int dx = (int) (mFocusX - (mFocusUnitX + .5f) * unit);
                 int dy = (int) (mFocusY - (mFocusUnitY + .5f) * unit);
                 mDrawRect.set(dx, dy,
-                        dx + mBitmapRect.right * mUnit, dy + mBitmapRect.bottom * mUnit);
+                        dx + mSrcRect.width() * mUnit, dy + mSrcRect.height() * mUnit);
                 adjustDrawRect();
                 invalidate();
             }
@@ -196,13 +216,10 @@ public class MagnifyView extends View implements OnScaleGestureListener {
             mFocusY = (int) detector.getFocusY();
             mFocusUnitX = ((int) mFocusX - mDrawRect.left) / mUnit;
             mFocusUnitY = ((int) mFocusY - mDrawRect.top) / mUnit;
-            if (mFocusUnitX >= 0 && mFocusUnitX < mBitmapRect.right &&
-                    mFocusUnitY >= 0 && mFocusUnitY < mBitmapRect.bottom) {
-                mIsScaling = true;
-                mScalingUnit = mUnit;
-                mScalingSpan = detector.getCurrentSpan();
-                return true;
-            }
+            mIsScaling = true;
+            mScalingUnit = mUnit;
+            mScalingSpan = detector.getCurrentSpan();
+            return true;
         }
         return false;
     }
@@ -215,15 +232,40 @@ public class MagnifyView extends View implements OnScaleGestureListener {
     /*-----------------------------------------------------------------------*/
 
     public void setBitmap(Bitmap bmp) {
+        setBitmap(bmp, 0, 0, (bmp == null) ? 0 : bmp.getWidth(),
+                (bmp == null) ? 0 : bmp.getHeight());
+    }
+
+    public void setBitmap(Bitmap bmp, int l, int t, int r, int b) {
         mBitmap = bmp;
+        mSrcRect.set(l, t, r, b);
         calcCoords();
         invalidate();
     }
 
+    public void setScaleRange(int min, int max) {
+        if (min <= max) {
+            mMinUnit = min;
+            mMaxUnit = max;
+            if (mUnit < min || mUnit > max) {
+                invalidate();
+            }
+        }
+    }
+
     public void setGridColor(int color, boolean dotted) {
-        mGridPaint.setColor(color);
+        mGridColor = color;
         mDotted = dotted;
         invalidate();
+    }
+
+    public void setFrameColor(int color) {
+        mFrameColor = color;
+        invalidate();
+    }
+
+    public void setScrollable(boolean enabled) {
+        mScrollable = enabled;
     }
 
     public void setEventHandler(EventHandler handler) {
@@ -252,22 +294,20 @@ public class MagnifyView extends View implements OnScaleGestureListener {
 
     private void calcCoords() {
         if (mBitmap == null) {
-            mBitmapRect.set(0, 0, 0, 0);
             mDrawRect.set(0, 0, 0, 0);
             return;
         }
-        int sw = mBitmap.getWidth();
-        int sh = mBitmap.getHeight();
-        mBitmapRect.set(0, 0, sw, sh);
+        int sw = mSrcRect.width();
+        int sh = mSrcRect.height();
         int dw = getWidth();
         int dh = getHeight();
         if (sw == 0 || sh == 0 || dw == 0 || dh == 0) {
             mDrawRect.set(0, 0, 0, 0);
             return;
         }
-        mUnit = Math.min((dw - 1) / sw, (dh - 1) / sh);
-        if (mUnit < MINIMUM_UNIT) {
-            mUnit = MINIMUM_UNIT;
+        mUnit = Math.min((dw - 2) / sw, (dh - 2) / sh);
+        if (mUnit < mMinUnit) {
+            mUnit = mMinUnit;
         }
         int dx = (dw - sw * mUnit) / 2;
         int dy = (dh - sh * mUnit) / 2;
