@@ -59,7 +59,8 @@ public class MagnifyView extends View implements OnScaleGestureListener {
     /*-----------------------------------------------------------------------*/
 
     public interface EventHandler {
-        public boolean onTouchEventUnit(MotionEvent ev, int unitX, int unitY);
+        public boolean onTouchEventUnit(
+                int action, float unitX, float unitY, float[] historicalCoords);
     }
 
     /*-----------------------------------------------------------------------*/
@@ -105,7 +106,7 @@ public class MagnifyView extends View implements OnScaleGestureListener {
             while (x1 < cr || y1 < cb) {
                 if (x1 < cr) x1 += mUnit; else y1 += mUnit;
                 if (y2 < cb) y2 += mUnit; else x2 += mUnit;
-                canvas.drawLine(x1, y1, x2, y2, mPaint);
+                canvas.drawLine(x1 + 1, y1, x2, y2 + 1, mPaint);
             }
         }
         canvas.drawBitmap(mBitmap, mSrcRect, mDrawRect, null);
@@ -144,9 +145,19 @@ public class MagnifyView extends View implements OnScaleGestureListener {
         int x = (int) event.getX();
         int y = (int) event.getY();
         if (mHandler != null) {
-            int unitX = (x - mDrawRect.left) / mUnit;
-            int unitY = (y - mDrawRect.top) / mUnit;
-            return mHandler.onTouchEventUnit(event, unitX, unitY);
+            int action = event.getActionMasked();
+            float unitX = (x - mDrawRect.left) / mUnit;
+            float unitY = (y - mDrawRect.top) / mUnit;
+            int histCount = event.getHistorySize();
+            float[] histCoords = null;
+            if (histCount > 0) {
+                histCoords = new float[histCount * 2];
+                for (int i = 0; i < histCount; i++) {
+                    histCoords[i * 2]     = (event.getHistoricalX(i) - mDrawRect.left) / mUnit;
+                    histCoords[i * 2 + 1] = (event.getHistoricalY(i) - mDrawRect.top) / mUnit;
+                }
+            }
+            return mHandler.onTouchEventUnit(action, unitX, unitY, histCoords);
         }
 
         if (!mScrollable) return false;

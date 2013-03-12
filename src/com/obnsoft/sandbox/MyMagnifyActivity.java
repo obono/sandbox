@@ -22,9 +22,7 @@ import com.obnsoft.view.MagnifyView.EventHandler;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.os.Bundle;
 import android.view.MotionEvent;
 
@@ -32,9 +30,6 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
 
     float[] mHSV = {0f, 1f, 1f};
     Bitmap  mBitmap;
-    Canvas  mCanvas;
-    Paint   mPaint = new Paint();
-
     MagnifyView mMgView;
 
     @Override
@@ -43,13 +38,12 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
 
         mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
         //mBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
-        mCanvas = new Canvas(mBitmap);
 
         mMgView = new MagnifyView(this);
         mMgView.setBitmap(mBitmap);
         mMgView.setScrollable(true);
         mMgView.setGridColor(Color.GRAY, false);
-        //mMgView.setEventHandler(this);
+        mMgView.setEventHandler(this);
         setContentView(mMgView);
     }
 
@@ -61,11 +55,15 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
     }
 
     @Override
-    public boolean onTouchEventUnit(MotionEvent ev, int x, int y) {
-        mPaint.setColor(Color.HSVToColor(mHSV));
-        mCanvas.drawPoint(x, y, mPaint);
-        if (++mHSV[0] >= 360) mHSV[0] = 0;
-        mMgView.invalidateUnit(x, y);
+    public boolean onTouchEventUnit(int action, float unitX, float unitY,
+            float[] historicalCoords) {
+        if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
+            int x = (int) unitX;
+            int y = (int) unitY;
+            mBitmap.setPixel(x, y, Color.HSVToColor(mHSV));
+            if (++mHSV[0] >= 360) mHSV[0] = 0;
+            mMgView.invalidateUnit(x, y);
+        }
         return true;
     }
 }
