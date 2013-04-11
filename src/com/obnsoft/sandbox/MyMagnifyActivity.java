@@ -60,9 +60,11 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
         if (action == MotionEvent.ACTION_DOWN || action == MotionEvent.ACTION_MOVE) {
             int x = (int) unitX;
             int y = (int) unitY;
-            mBitmap.setPixel(x, y, Color.HSVToColor(mHSV));
-            if (++mHSV[0] >= 360) mHSV[0] = 0;
-            mMgView.invalidateUnit(x, y);
+            if (x >= 0 && y >= 0 && x < mBitmap.getWidth() && y < mBitmap.getHeight()) {
+                mBitmap.setPixel(x, y, Color.HSVToColor(mHSV));
+                if (++mHSV[0] >= 360) mHSV[0] = 0;
+                mMgView.invalidateUnit(x, y);
+            }
         }
         return true;
     }
