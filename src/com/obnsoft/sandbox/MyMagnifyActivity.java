@@ -21,7 +21,6 @@ import com.obnsoft.view.MagnifyView.EventHandler;
 
 import android.app.Activity;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.MotionEvent;
@@ -36,8 +35,7 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mBitmap = BitmapFactory.decodeResource(getResources(), R.drawable.icon);
-        //mBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
+        mBitmap = Bitmap.createBitmap(16, 16, Bitmap.Config.ARGB_8888);
 
         mMgView = new MagnifyView(this);
         mMgView.setBitmap(mBitmap);
