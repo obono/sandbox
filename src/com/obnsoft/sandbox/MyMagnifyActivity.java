@@ -24,11 +24,20 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.view.ViewGroup;
+import android.view.ViewGroup.LayoutParams;
+import android.widget.CheckBox;
+import android.widget.FrameLayout;
 
 public class MyMagnifyActivity extends Activity implements EventHandler {
 
+    static final int MP = ViewGroup.LayoutParams.MATCH_PARENT;
+    static final int WC = ViewGroup.LayoutParams.WRAP_CONTENT;
+
     float[] mHSV = {0f, 1f, 1f};
-    Bitmap  mBitmap;
+    Bitmap      mBitmap;
     MagnifyView mMgView;
 
     @Override
@@ -43,6 +52,18 @@ public class MyMagnifyActivity extends Activity implements EventHandler {
         mMgView.setGridColor(Color.GRAY, false);
         mMgView.setEventHandler(this);
         setContentView(mMgView);
+
+        FrameLayout fl = new FrameLayout(this);
+        setContentView(fl);
+        fl.addView(mMgView, new LayoutParams(MP, MP));
+        final CheckBox checkBox = new CheckBox(this);
+        checkBox.setText("OFF:Draw / ON:Magnify");
+        checkBox.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                mMgView.setEventHandler(checkBox.isChecked() ? null : MyMagnifyActivity.this);
+            }
+        });
+        fl.addView(checkBox, new LayoutParams(WC, WC));
     }
 
     @Override
