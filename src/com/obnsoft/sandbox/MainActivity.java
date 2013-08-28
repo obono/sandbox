@@ -94,6 +94,11 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    public void onGestureView(View v) {
+        Intent intent = new Intent(this, MyGestureActivity.class);
+        startActivity(intent);
+    }
+
     private void pickColor(final View cpv) {
         final ColorPickerInterface cpi;
         try {

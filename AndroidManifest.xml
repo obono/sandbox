@@ -31,6 +31,11 @@
             android:label="@string/app_name"
             android:configChanges="orientation"
             />
+        <activity
+            android:name=".MyGestureActivity"
+            android:label="@string/app_name"
+            android:configChanges="orientation"
+            />
     </application>
 
 </manifest>
